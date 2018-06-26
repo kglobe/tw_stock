@@ -32,7 +32,7 @@ def financial_statement(year, season, type='綜合損益彙總表'):
     
     r.encoding = 'utf8'
     dfs = pd.read_html(r.text)
-    
+    print(dfs)
     
     for i, df in enumerate(dfs):
         df.columns = df.iloc[0]
@@ -42,3 +42,5 @@ def financial_statement(year, season, type='綜合損益彙總表'):
     df = df[df['公司代號'] != '公司代號']
     df = df[~df['公司代號'].isnull()]
     return df
+
+financial_statement()

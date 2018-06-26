@@ -16,6 +16,9 @@ df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '})
                                      if len(i.split('",')) == 17 and i[0] != '='])), header=0)
 
 ##本益比超過15的
-df[pd.to_numeric(df['本益比'], errors='coerce') < 15]
+df[pd.to_numeric(df['本益比'], errors='coerce') < 4]
 	
-df = df.set_index(['公司名稱'])
+df2 = df.set_index(['證券名稱'])
+print(df2)
+df2.to_csv("tete2.csv", sep='\t',encoding='utf-8')
+df.to_csv("tete.csv", sep='\t',encoding='utf-8')
