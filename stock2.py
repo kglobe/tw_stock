@@ -8,15 +8,15 @@ Created on Mon May 28 09:26:22 2018
 import requests
 import pandas as pd
 import numpy as np
-def financial_statement(year, season, type='綜合損益彙總表'):
+def financial_statement(year, season, reportType):
     if year >= 1000:
         year -= 1911
         
-    if type == '綜合損益彙總表':
+    if reportType == '綜合損益彙總表':
         url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb04'
-    elif type == '資產負債彙總表':
+    elif reportType == '資產負債彙總表':
         url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb05'
-    elif type == '營益分析彙總表':
+    elif reportType == '營益分析彙總表':
         url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb06'
     else:
         print('type does not match')
@@ -32,7 +32,7 @@ def financial_statement(year, season, type='綜合損益彙總表'):
     
     r.encoding = 'utf8'
     dfs = pd.read_html(r.text)
-    print(dfs)
+    
     
     for i, df in enumerate(dfs):
         df.columns = df.iloc[0]
@@ -43,4 +43,7 @@ def financial_statement(year, season, type='綜合損益彙總表'):
     df = df[~df['公司代號'].isnull()]
     return df
 
-financial_statement()
+
+df = financial_statement(2018,1,'綜合損益彙總表')
+
+df.to_excel('excel_output.xlsx')
