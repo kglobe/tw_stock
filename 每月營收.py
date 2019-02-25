@@ -40,10 +40,22 @@ def monthly_report(year, month):
     df = df[df['公司代號'] != '合計']
     
     # 偽停頓
-    time.sleep(5)
+    time.sleep(3)
     return df
 
 # 民國100年1月
 #monthly_report(100,1)
 # 西元2011年1月
-print(monthly_report(2011,1))
+# print(monthly_report(2011,1))
+df = monthly_report(2019,1)
+fliter = (df["公司代號"] == "2330")
+df = df[fliter]
+# print(df)
+df2 = monthly_report(2018,12)
+fliter2 = (df2["公司代號"] == "2330")
+df2 = df2[fliter2]
+# print(df2)
+df = df.append(df2, ignore_index=True)
+print(df)
+# with open('2330FILE.csv', 'w') as f:
+#     f.writelines(df)
