@@ -5,23 +5,30 @@ import pandas as pd
 from io import StringIO
 import io
 from model import stock_price
-from db_session import dbSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from utility import getDbUrl
+from log_tool import LogTool
 import math
+import time
 
-def stockprice(stock_code,year,month,date):
+
+def stockprice(session,stock_code,year,month,date):
     start = datetime.datetime(year, month, date, 0, 0, 0)
     nowTime = datetime.datetime.now()
     period2 = str(round(((nowTime-start).total_seconds())))
     site = "https://query1.finance.yahoo.com/v7/finance/download/"+stock_code+".TW?period1=0&period2="+period2+"&interval=1d&events=history&crumb=hP2rOschxO0"
     response = requests.post(site)
     urlData = response.text
-    session = dbSession().getSession()
     rawData = pd.read_csv(io.StringIO(urlData))
-    print(rawData.head())
+    infolog = LogTool('stock_price','info')
     for index, row in rawData.iterrows():
         if math.isnan(row["Open"]) or pd.isnull(row["Date"]) or math.isnan(row["Volume"]):
             continue
         else:
+            updatedate = datetime.datetime.now().strftime('%Y%m%d')
+            updatetime = datetime.datetime.now().strftime('%H%M%S')
+            
             stockprice = stock_price()
             stockprice.stockCode = stock_code
             stockprice.priceDate = row["Date"]
@@ -31,11 +38,39 @@ def stockprice(stock_code,year,month,date):
             stockprice.closePrice = row["Close"]
             stockprice.adj_close = row["Adj Close"]
             stockprice.volume = row["Volume"]
-            session.add(stockprice)
+            stockprice.updateDate = updatedate
+            stockprice.updatTime = updatetime
+            session.merge(stockprice)
     session.commit()
-    session.close()
+    infolog.log_dataBase(stock_code+' commit ok!')
 #     with open(stock_code+'.csv', 'w') as f:
 #         f.writelines(response.text)
 
+def getAllStock():
+    errorLog = LogTool('stock_price','error')
+    infoLog = LogTool('stock_price','info')
+    try:
+        engine = create_engine(getDbUrl(), max_overflow=5)
+        # create a configured "Session" class
+        Session = sessionmaker(bind=engine)
+        # create a Session
+        session = Session()
+        for i in range(1,9999):
+            stock_code = '{:04d}'.format(i)
+            print('get '+stock_code+' stock price')
+            infoLog.log_dataBase('get '+stock_code+' stock price start...')
+            stockprice(session,stock_code,1970,1,1)
+            infoLog.log_dataBase('get '+stock_code+' stock price end...')
+            time.sleep(2)
+    except Exception as e:
+        print(str(e))
+        errorLog.log_dataBase(stock_code+' Exception: '+str(e))
+    finally:
+        try:
+            session.close()
+        except Exception as e:
+            return
+
 if __name__ == '__main__':
-    stockprice('1409',1970,1,1)
+    # stockprice('1409',1970,1,1)
+    getAllStock()

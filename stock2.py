@@ -13,11 +13,11 @@ def financial_statement(year, season, reportType):
         year -= 1911
         
     if reportType == '綜合損益彙總表':
-        url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb04'
+        url = 'https://mops.twse.com.tw/mops/web/ajax_t163sb04'
     elif reportType == '資產負債彙總表':
-        url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb05'
+        url = 'https://mops.twse.com.tw/mops/web/ajax_t163sb05'
     elif reportType == '營益分析彙總表':
-        url = 'http://mops.twse.com.tw/mops/web/ajax_t163sb06'
+        url = 'https://mops.twse.com.tw/mops/web/ajax_t163sb06'
     else:
         print('type does not match')
     r = requests.post(url, {
@@ -32,7 +32,7 @@ def financial_statement(year, season, reportType):
     
     r.encoding = 'utf8'
     dfs = pd.read_html(r.text)
-    
+    print(dfs)
     
     for i, df in enumerate(dfs):
         df.columns = df.iloc[0]
@@ -91,9 +91,9 @@ def getNetAfterTaxProfitMarginValue(df):
     except Exception as e:
         return float(0)
 
-df_new = financial_statement(2018,1,'營益分析彙總表')
-df_old = financial_statement(2017,1,'營益分析彙總表')
-#df_new.to_excel('excel_output2_df_new.xlsx')
+df_new = financial_statement(2018,5,'營益分析彙總表')
+df_old = financial_statement(2017,5,'營益分析彙總表')
+# df_new.to_excel('excel_output2_df_new.xlsx')
 #df_old.to_excel('excel_output2_df_old.xlsx')
 
 for compCode in df_new['公司代號']:

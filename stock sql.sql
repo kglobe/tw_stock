@@ -6,7 +6,9 @@ CREATE TABLE db.stock_price (
   lowPrice DECIMAL(12,6),
   closePrice DECIMAL(12,6),
   adj_close DECIMAL(12,6),
-  volume DECIMAL(21,6),
+  volume DECIMAL(56,6),
+  updateDate varchar(8),
+  updatTime varchar(6),
   PRIMARY KEY (priceDate,stockCode)
 );
 
@@ -24,5 +26,17 @@ CREATE TABLE db.monthly_revenue (
   compLastAccRevenue DECIMAL(21,6),
   yoy DECIMAL(12,6),
   remarks varchar(500) COLLATE utf8mb4_unicode_ci ,
+  updateDate varchar(8),
+  updatTime varchar(6),
   PRIMARY KEY (revenueMonth,stockCode)
+);
+
+CREATE TABLE db.error_log (
+  prikey varchar(30) not null,
+  pyFile varchar(30),
+  errorType varchar(6),
+  msg varchar(500),
+  updateDate varchar(8),
+  updatTime varchar(6),
+  PRIMARY KEY (prikey)
 );

@@ -15,9 +15,9 @@ def monthly_report(year, month):
     if year > 1990:
         year -= 1911
     
-    url = 'http://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'_0.html'
+    url = 'https://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'_0.html'
     if year <= 98:
-        url = 'http://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'.html'
+        url = 'https://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'.html'
     
     # 偽瀏覽器
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -26,7 +26,6 @@ def monthly_report(year, month):
     r = requests.get(url, headers=headers)
     r.encoding = 'big5'
     html_df = pd.read_html(StringIO(r.text))
-    
     # 處理一下資料
     if html_df[0].shape[0] > 500:
         df = html_df[0].copy()
@@ -38,6 +37,7 @@ def monthly_report(year, month):
     df['當月營收'] = pd.to_numeric(df['當月營收'], 'coerce')
     df = df[~df['當月營收'].isnull()]
     df = df[df['公司代號'] != '合計']
+    print((df['當月累計營收'].astype('int64')-df['去年累計營收'].astype('int64'))/df['當月累計營收'].astype('int64'))
     
     # 偽停頓
     time.sleep(3)
@@ -47,15 +47,33 @@ def monthly_report(year, month):
 #monthly_report(100,1)
 # 西元2011年1月
 # print(monthly_report(2011,1))
-df = monthly_report(2019,1)
-fliter = (df["公司代號"] == "2330")
-df = df[fliter]
+# df = monthly_report(2019,1)
+# fliter = (df["公司代號"] == "2330")
+# df = df[fliter]
 # print(df)
-df2 = monthly_report(2018,12)
-fliter2 = (df2["公司代號"] == "2330")
-df2 = df2[fliter2]
+# df2 = monthly_report(2019,2)
+# fliter2 = (df2["公司代號"] == "2330")
+# df2 = df2[fliter2]
 # print(df2)
-df = df.append(df2, ignore_index=True)
-print(df)
+# df = df.append(df2, ignore_index=True)
+
+df3 = monthly_report(2019,3)
+# fliter3 = (df3["公司代號"] == "2330")
+# df3 = df3[fliter3]
+# df = df.append(df3, ignore_index=True)
+# print(df)
 # with open('2330FILE.csv', 'w') as f:
 #     f.writelines(df)
+def getAllMonthRevenue():
+    for i in range(1,9999):
+        stock_code = '{:04d}'.format(i)
+        try:
+            for yy in range(2010,2019):
+                for mm in range(1,12):
+                    print('get '+stock_code+' monthly revenue')
+                    monthly_report(yy,mm)
+        except Exception as e:
+            print(str(e))
+
+# if __name__ == '__main__':
+#     getAllMonthRevenue()
