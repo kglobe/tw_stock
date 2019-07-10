@@ -56,16 +56,16 @@ def getAllStock():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        for i in range(81,9999):
+        for i in range(1,9999):
             stock_code = '{:04d}'.format(i)
             print('get '+stock_code+' stock price')
             infoLog.log_dataBase('get '+stock_code+' stock price start...')
-            stockprice(session,stock_code,1970,1,1,infoLog,errorLog)
+            stockprice(session,stock_code,2019,7,8,infoLog,errorLog)
             infoLog.log_dataBase('get '+stock_code+' stock price end...')
             time.sleep(2)
     except Exception as e:
         print(str(e))
-        errorLog.log_dataBase(stock_code+' Exception: '+str(e))
+        errorLog.log_dataBase(stock_code+' stock price Exception: '+str(e))
     finally:
         try:
             session.close()
