@@ -32,11 +32,11 @@ CREATE TABLE db.monthly_revenue (
 );
 
 CREATE TABLE db.error_log (
-  prikey varchar(30) not null,
+  priKey varchar(30) not null,
   pyFile varchar(30),
   errorType varchar(6),
   msg varchar(500),
   updateDate varchar(8),
-  updatTime varchar(6),
+  updateTime varchar(6),
   PRIMARY KEY (prikey)
 );

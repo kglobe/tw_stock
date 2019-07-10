@@ -35,9 +35,9 @@ class monthly_revenue(Base):
 
 class error_log(Base):
     __tablename__ = 'error_log'
-    prikey = Column(String(30), primary_key=True, nullable=True)
+    priKey = Column(String(30), primary_key=True, nullable=True)
     pyFile = Column(String(30))
     errorType = Column(String(6))
     msg = Column(String(500))
     updateDate = Column(String(8))
-    updatTime = Column(String(6))
+    updateTime = Column(String(6))

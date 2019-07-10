@@ -11,17 +11,18 @@ from utility import getDbUrl
 from log_tool import LogTool
 import math
 import time
+from sqlalchemy.pool import NullPool
 
-
-def stockprice(session,stock_code,year,month,date):
+def stockprice(session,stock_code,year,month,date,infoLog,errorLog):
     start = datetime.datetime(year, month, date, 0, 0, 0)
     nowTime = datetime.datetime.now()
     period2 = str(round(((nowTime-start).total_seconds())))
     site = "https://query1.finance.yahoo.com/v7/finance/download/"+stock_code+".TW?period1=0&period2="+period2+"&interval=1d&events=history&crumb=hP2rOschxO0"
     response = requests.post(site)
+    if response.status_code != '200':
+        errorLog.log_dataBase(stock_code+' not found !')
     urlData = response.text
     rawData = pd.read_csv(io.StringIO(urlData))
-    infolog = LogTool('stock_price','info')
     for index, row in rawData.iterrows():
         if math.isnan(row["Open"]) or pd.isnull(row["Date"]) or math.isnan(row["Volume"]):
             continue
@@ -42,7 +43,7 @@ def stockprice(session,stock_code,year,month,date):
             stockprice.updatTime = updatetime
             session.merge(stockprice)
     session.commit()
-    infolog.log_dataBase(stock_code+' commit ok!')
+    infoLog.log_dataBase(stock_code+' commit ok!')
 #     with open(stock_code+'.csv', 'w') as f:
 #         f.writelines(response.text)
 
@@ -50,16 +51,16 @@ def getAllStock():
     errorLog = LogTool('stock_price','error')
     infoLog = LogTool('stock_price','info')
     try:
-        engine = create_engine(getDbUrl(), max_overflow=5)
+        engine = create_engine(getDbUrl(), poolclass=NullPool)
         # create a configured "Session" class
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        for i in range(1,9999):
+        for i in range(81,9999):
             stock_code = '{:04d}'.format(i)
             print('get '+stock_code+' stock price')
             infoLog.log_dataBase('get '+stock_code+' stock price start...')
-            stockprice(session,stock_code,1970,1,1)
+            stockprice(session,stock_code,1970,1,1,infoLog,errorLog)
             infoLog.log_dataBase('get '+stock_code+' stock price end...')
             time.sleep(2)
     except Exception as e:

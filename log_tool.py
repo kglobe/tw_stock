@@ -12,6 +12,7 @@ from model import error_log
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from utility import getDbUrl
+from sqlalchemy.pool import NullPool
 
 class LogTool:
 
@@ -22,14 +23,11 @@ class LogTool:
     def log_dataBase(self,msg):
         try:
             self.log_txt(msg)
-                    
-            engine = create_engine(getDbUrl())
+            engine = create_engine(getDbUrl(), poolclass=NullPool)
             DB_Session = sessionmaker(bind=engine)
             session = DB_Session()
-
             updatedate = datetime.datetime.now().strftime('%Y%m%d')
             updatetime = datetime.datetime.now().strftime('%H%M%S')
-
             errorLog = error_log()
             errorLog.priKey = str(int(round(time.time() * 100000)))
             errorLog.pyFile = self.pyFile
