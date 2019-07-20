@@ -14,8 +14,19 @@ from log_tool import LogTool
 from model import monthly_revenue
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from utility import getDbUrl
+from utility import getDbUrl, getDataFrameData
 from sqlalchemy.pool import NullPool
+
+def getYoYData(df):
+    yoyDf = None
+    try:
+        if float(df['當月累計營收']) == 0:
+            yoyDf = pd.Series(0, index=df.index)
+        else:
+            yoyDf = pd.Series((df['當月累計營收']-df['去年累計營收'])/df['當月累計營收'], index=df.index)
+    except Exception as e:
+        yoyDf = pd.Series(0, index=df.index)
+    return yoyDf
 
 def monthly_report(session, year, month, infoLog):
     
@@ -29,11 +40,15 @@ def monthly_report(session, year, month, infoLog):
     
     # 偽瀏覽器
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-    
-    # 下載該年月的網站，並用pandas轉換成 dataframe
-    r = requests.get(url, headers=headers)
-    r.encoding = 'big5'
-    html_df = pd.read_html(StringIO(r.text))
+    try:
+        # 下載該年月的網站，並用pandas轉換成 dataframe
+        r = requests.get(url, headers=headers)
+        r.encoding = 'big5'
+        html_df = pd.read_html(StringIO(r.text))
+    except Exception as e:
+        print(str(e))
+        infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e))
+        return
     # 處理一下資料
     if html_df[0].shape[0] > 500:
         df = html_df[0].copy()
@@ -52,7 +67,7 @@ def monthly_report(session, year, month, infoLog):
     df['前期比較增減(%)'] = pd.to_numeric(df['前期比較增減(%)'], 'coerce')
     df = df[~df['當月營收'].isnull()]
     df = df[df['公司代號'] != '合計']
-    df['累積年增率'] = pd.Series((df['當月累計營收']-df['去年累計營收'])/df['當月累計營收'], index=df.index)
+    df['累積年增率'] = getYoYData(df)
     year = year+1911
     month = '{:02d}'.format(month)
     # print(df.describe())
@@ -64,17 +79,17 @@ def monthly_report(session, year, month, infoLog):
         
         mr = monthly_revenue()
         mr.revenueMonth = str(year)+str(month)
-        mr.stockCode = df.iloc[i]['公司代號']
-        mr.stockName = df.iloc[i]['公司名稱']
-        mr.thisMonthRevenue = float(df.iloc[i]['當月營收']) if np.isnan(df.iloc[i]['當月營收'])==False else None
-        mr.lastMonthRevenue = float(df.iloc[i]['上月營收']) if np.isnan(df.iloc[i]['上月營收'])==False else None
-        mr.lastYearRevenue = float(df.iloc[i]['去年當月營收']) if np.isnan(df.iloc[i]['去年當月營收'])==False else None
-        mr.compLastMonth = float(df.iloc[i]['上月比較增減(%)']) if np.isnan(df.iloc[i]['上月比較增減(%)'])==False else None
-        mr.compLastYear = float(df.iloc[i]['去年同月增減(%)']) if np.isnan(df.iloc[i]['去年同月增減(%)'])==False else None
-        mr.thisMonthAccRevenue = float(df.iloc[i]['當月累計營收']) if np.isnan(df.iloc[i]['當月累計營收'])==False else None
-        mr.lastYearAccRevenue = float(df.iloc[i]['去年累計營收']) if np.isnan(df.iloc[i]['去年累計營收'])==False else None
-        mr.compLastAccRevenue = float(df.iloc[i]['前期比較增減(%)']) if np.isnan(df.iloc[i]['前期比較增減(%)'])==False else None
-        mr.yoy = float(round(df.iloc[i]['累積年增率'],6)) if np.isnan(df.iloc[i]['累積年增率'])==False else None
+        mr.stockCode = getDataFrameData('str',df.iloc[i,:],'公司代號')
+        mr.stockName = getDataFrameData('str',df.iloc[i,:],'公司名稱')
+        mr.thisMonthRevenue = getDataFrameData('float',df.iloc[i,:],'當月營收')
+        mr.lastMonthRevenue = getDataFrameData('float',df.iloc[i,:],'上月營收')
+        mr.lastYearRevenue = getDataFrameData('float',df.iloc[i,:],'去年當月營收')
+        mr.compLastMonth = getDataFrameData('float',df.iloc[i,:],'上月比較增減(%)')
+        mr.compLastYear = getDataFrameData('float',df.iloc[i,:],'去年同月增減(%)')
+        mr.thisMonthAccRevenue = getDataFrameData('float',df.iloc[i,:],'當月累計營收')
+        mr.lastYearAccRevenue = getDataFrameData('float',df.iloc[i,:],'去年累計營收')
+        mr.compLastAccRevenue = getDataFrameData('float',df.iloc[i,:],'前期比較增減(%)')
+        mr.yoy = round(getDataFrameData('float',df.iloc[i,:],'累積年增率'),6)
         mr.updateDate = updatedate
         mr.updatTime = updatetime
         session.merge(mr)
@@ -84,39 +99,18 @@ def monthly_report(session, year, month, infoLog):
     
     # return df
 
-# 民國100年1月
-#monthly_report(100,1)
-# 西元2011年1月
-# print(monthly_report(2011,1))
-# df = monthly_report(2019,1)
-# fliter = (df["公司代號"] == "2330")
-# df = df[fliter]
-# print(df)
-# df2 = monthly_report(2019,2)
-# fliter2 = (df2["公司代號"] == "2330")
-# df2 = df2[fliter2]
-# print(df2)
-# df = df.append(df2, ignore_index=True)
-
-# df3 = monthly_report(2019,3)
-# fliter3 = (df3["公司代號"] == "2330")
-# df3 = df3[fliter3]
-# df = df.append(df3, ignore_index=True)
-# print(df)
-# with open('2330FILE.csv', 'w') as f:
-#     f.writelines(df)
-
 def getAllMonthRevenue():
-    errorLog = LogTool('stock_price','error')
-    infoLog = LogTool('stock_price','info')
+    errorLog = LogTool('monthly_revenue','error')
+    infoLog = LogTool('monthly_revenue','info')
     try:
         engine = create_engine(getDbUrl(), poolclass=NullPool)
         # create a configured "Session" class
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        for yy in range(2010,2019):
-            for mm in range(1,12):
+        # monthly_report(session,2011,1,infoLog)
+        for yy in range(2019,2020):
+            for mm in range(1,13):
                 print('get '+str(yy)+str(mm)+' monthly revenue')
                 infoLog.log_dataBase('get '+str(yy)+str(mm)+' monthly revenue start...')
                 monthly_report(session,yy,mm,infoLog)

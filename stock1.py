@@ -23,7 +23,7 @@ df.to_excel('excel_output_df.xlsx')
 #轉成數字來做本益比條件的index
 numIndex = pd.to_numeric(df['本益比'], errors='coerce')
 aa = df[(numIndex < 4) & (numIndex > 0)]
-aa.to_excel('excel_output_aa.xlsx')
+aa.to_excel('excel_output_a711.xlsx')
 
 #用名稱查詢單一股票
 df2 = df[df['證券名稱'] == '中鋼']

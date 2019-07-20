@@ -19,16 +19,39 @@ CREATE TABLE db.monthly_revenue (
   thisMonthRevenue DECIMAL(21,6),
   lastMonthRevenue DECIMAL(21,6),
   lastYearRevenue DECIMAL(21,6),
-  compLastMonth DECIMAL(12,6),
-  compLastYear DECIMAL(12,6),
+  compLastMonth DECIMAL(21,6),
+  compLastYear DECIMAL(21,6),
   thisMonthAccRevenue DECIMAL(21,6),
   lastYearAccRevenue DECIMAL(21,6),
   compLastAccRevenue DECIMAL(21,6),
-  yoy DECIMAL(12,6),
+  yoy DECIMAL(21,6),
   remarks varchar(500) COLLATE utf8mb4_unicode_ci ,
   updateDate varchar(8),
   updatTime varchar(6),
   PRIMARY KEY (revenueMonth,stockCode)
+);
+
+CREATE TABLE db.price_earnings_ratio (
+  priceDate date not null,
+  stockCode varchar(6) not null,
+  stockName varchar(500) COLLATE utf8mb4_unicode_ci ,
+  tradingVolume DECIMAL(21,6),
+  numOfTransactions DECIMAL(21,6),
+  turnover DECIMAL(21,6),
+  openPrice DECIMAL(12,6),
+  highPrice DECIMAL(12,6),
+  lowPrice DECIMAL(12,6),
+  closePrice DECIMAL(12,6),
+  upOrDown varchar(5),
+  priceLimit DECIMAL(12,6),
+  finalBuyPrice DECIMAL(12,6),
+  finalBuyVolume DECIMAL(21,6),
+  finalSellPrice DECIMAL(21,6),
+  finalSellVolume DECIMAL(21,6),
+  PER DECIMAL(21,6),
+  updateDate varchar(8),
+  updatTime varchar(6),
+  PRIMARY KEY (priceDate,stockCode)
 );
 
 CREATE TABLE db.error_log (

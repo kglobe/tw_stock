@@ -23,6 +23,8 @@ def stockprice(session,stock_code,year,month,date,infoLog,errorLog):
         errorLog.log_dataBase(stock_code+' not found !')
     urlData = response.text
     rawData = pd.read_csv(io.StringIO(urlData))
+    
+    print('----insert '+str(year)+str(month)+' stock price----')
     for index, row in rawData.iterrows():
         if math.isnan(row["Open"]) or pd.isnull(row["Date"]) or math.isnan(row["Volume"]):
             continue
@@ -43,6 +45,7 @@ def stockprice(session,stock_code,year,month,date,infoLog,errorLog):
             stockprice.updatTime = updatetime
             session.merge(stockprice)
     session.commit()
+    print('----insert '+str(year)+str(month)+' stock price ok----')
     infoLog.log_dataBase(stock_code+' commit ok!')
 #     with open(stock_code+'.csv', 'w') as f:
 #         f.writelines(response.text)
@@ -56,7 +59,7 @@ def getAllStock():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        for i in range(1,9999):
+        for i in range(1,10000):
             stock_code = '{:04d}'.format(i)
             print('get '+stock_code+' stock price')
             infoLog.log_dataBase('get '+stock_code+' stock price start...')
