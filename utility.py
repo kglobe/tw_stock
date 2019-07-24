@@ -1,4 +1,5 @@
 import pandas as pd
+import datetime
 
 def getDbUrl():
     return 'mysql+pymysql://root:1111@127.0.0.1:3306/db?charset=UTF8MB4'
@@ -21,3 +22,13 @@ def getDataFrameData(convertType,df,key):
         getValue = None
 
     return getValue
+
+def getLastMonth(thisMonth):
+    dataDate = datetime.datetime.strptime(thisMonth, '%Y%m')
+    lastMonthYear = dataDate.year
+    lastMonth = dataDate.month - 1
+    if lastMonth == 0:
+        lastMonth = 12
+        lastMonthYear = lastMonthYear - 1
+    last = datetime.datetime.strptime(str(lastMonthYear)+str(lastMonth), '%Y%m')
+    return last

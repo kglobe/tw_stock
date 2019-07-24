@@ -10,7 +10,7 @@ import numpy as np
 
 #營業收入統計表
 def OperatingIncomeReport(co_id):
-    url = 'http://mops.twse.com.tw/mops/web/ajax_t146sb05'
+    url = 'https://mops.twse.com.tw/mops/web/ajax_t146sb05'
     r = requests.post(url, {
             'encodeURIComponent':1,
             'step':2,

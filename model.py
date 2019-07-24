@@ -6,12 +6,14 @@ class stock_price(Base):
     __tablename__ = 'stock_price'
     priceDate = Column(String(8), primary_key=True, nullable=True)
     stockCode = Column(String(6), primary_key=True, nullable=True)
+    tradingVolume = Column(Integer)
+    turnover = Column(Integer)
     openPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     highPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     lowPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     closePrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
-    adj_close = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
-    volume = Column(Integer)
+    priceLimit = Column(String(10))
+    numOfTransactions = Column(Integer)
     updateDate = Column(String(8))
     updatTime = Column(String(6))
 
@@ -54,6 +56,14 @@ class price_earnings_ratio(Base):
     PER = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     updateDate = Column(String(8))
     updatTime = Column(String(6))
+
+class check_stock_revenue(Base):
+    __tablename__ = 'check_stock_revenue'
+    priKey = Column(String(30), primary_key=True, nullable=True)
+    stockCode = Column(String(6), primary_key=True, nullable=True)
+    stockName = Column(String(500))
+    updateDate = Column(String(8))
+    updateTime = Column(String(6))
 
 class error_log(Base):
     __tablename__ = 'error_log'

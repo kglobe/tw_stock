@@ -2,55 +2,57 @@ import requests
 import datetime
 import sys
 import pandas as pd
+import numpy as np
 from io import StringIO
 import io
 from model import stock_price
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from utility import getDbUrl
+from utility import getDbUrl, getLastMonth, getDataFrameData
 from log_tool import LogTool
 import math
 import time
 from sqlalchemy.pool import NullPool
 
-def stockprice(session,stock_code,year,month,date,infoLog,errorLog):
-    start = datetime.datetime(year, month, date, 0, 0, 0)
-    nowTime = datetime.datetime.now()
-    period2 = str(round(((nowTime-start).total_seconds())))
-    site = "https://query1.finance.yahoo.com/v7/finance/download/"+stock_code+".TW?period1=0&period2="+period2+"&interval=1d&events=history&crumb=hP2rOschxO0"
-    response = requests.post(site)
-    if response.status_code != '200':
-        errorLog.log_dataBase(stock_code+' not found !')
-    urlData = response.text
-    rawData = pd.read_csv(io.StringIO(urlData))
-    
-    print('----insert '+str(year)+str(month)+' stock price----')
-    for index, row in rawData.iterrows():
-        if math.isnan(row["Open"]) or pd.isnull(row["Date"]) or math.isnan(row["Volume"]):
-            continue
-        else:
-            updatedate = datetime.datetime.now().strftime('%Y%m%d')
-            updatetime = datetime.datetime.now().strftime('%H%M%S')
-            
-            stockprice = stock_price()
-            stockprice.stockCode = stock_code
-            stockprice.priceDate = row["Date"]
-            stockprice.openPrice = row["Open"]
-            stockprice.highPrice = row["High"]
-            stockprice.lowPrice = row["Low"]
-            stockprice.closePrice = row["Close"]
-            stockprice.adj_close = row["Adj Close"]
-            stockprice.volume = row["Volume"]
-            stockprice.updateDate = updatedate
-            stockprice.updatTime = updatetime
-            session.merge(stockprice)
+def stockprice(session,stock_code,year_month,infoLog,errorLog):
+    resp = requests.get('https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date='+year_month+'&stockNo='+str(stock_code))
+    resp_data = resp.json()
+    if resp_data['stat'] != 'OK':
+        print('stock('+stock_code+'): '+str(resp_data['stat']))
+        infoLog.log_dataBase(stock_code+' : '+str(resp_data['stat']))
+        return
+    rawData = pd.DataFrame(np.array(resp_data['data']), columns=np.array(resp_data['fields']))
+    print('----insert '+str(year_month)+' stock('+stock_code+') price----')
+    for i in range(0,rawData.shape[0]):
+        stockPrice = rawData.iloc[i]
+
+        updatedate = datetime.datetime.now().strftime('%Y%m%d')
+        updatetime = datetime.datetime.now().strftime('%H%M%S')
+        
+        stockprice = stock_price()
+        stockprice.stockCode = stock_code
+        stockdate = getDataFrameData('str',stockPrice,'日期')
+        year = int(stockdate[:3])+1911
+        stockprice.priceDate = str(year)+stockdate[3:]
+        stockprice.tradingVolume = getDataFrameData('int',stockPrice,'成交股數')
+        stockprice.turnover = getDataFrameData('int',stockPrice,'成交金額')
+        stockprice.openPrice = getDataFrameData('float',stockPrice,'開盤價')
+        stockprice.highPrice = getDataFrameData('float',stockPrice,'最高價')
+        stockprice.lowPrice = getDataFrameData('float',stockPrice,'最低價')
+        stockprice.closePrice = getDataFrameData('float',stockPrice,'收盤價')
+        stockprice.priceLimit = getDataFrameData('str',stockPrice,'漲跌價差')
+        stockprice.numOfTransactions = getDataFrameData('int',stockPrice,'成交筆數')
+        stockprice.updateDate = updatedate
+        stockprice.updatTime = updatetime
+        session.merge(stockprice)
     session.commit()
-    print('----insert '+str(year)+str(month)+' stock price ok----')
+    print('----insert '+str(year_month)+' stock('+stock_code+') price ok----')
     infoLog.log_dataBase(stock_code+' commit ok!')
 #     with open(stock_code+'.csv', 'w') as f:
 #         f.writelines(response.text)
 
 def getAllStock():
+    before = int(input("請輸入往前抓幾個月？："))
     errorLog = LogTool('stock_price','error')
     infoLog = LogTool('stock_price','info')
     try:
@@ -59,16 +61,26 @@ def getAllStock():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        for i in range(1,10000):
-            stock_code = '{:04d}'.format(i)
-            print('get '+stock_code+' stock price')
-            infoLog.log_dataBase('get '+stock_code+' stock price start...')
-            stockprice(session,stock_code,2019,7,8,infoLog,errorLog)
-            infoLog.log_dataBase('get '+stock_code+' stock price end...')
-            time.sleep(2)
+        runDay = datetime.date.today()
+        for k in range(0,before+1):
+            runYYMM = str(runDay.year)+str(runDay.month)
+            for i in range(50,10000):
+                stock_code = '{:04d}'.format(i)
+                print('get '+runYYMM+' stock('+stock_code+') stock price start...')
+                infoLog.log_dataBase('get '+runYYMM+' stock('+stock_code+') stock price start...')
+                stockprice(session,stock_code,runYYMM,infoLog,errorLog)
+                infoLog.log_dataBase('get '+runYYMM+' stock('+stock_code+') stock price end...')
+                print('get '+runYYMM+' stock('+stock_code+') stock price end...')
+                if i%10 == 0:
+                    print('sleep 30 seconds...')
+                    time.sleep(30)
+                else:
+                    print('sleep 10 seconds...')
+                    time.sleep(10)
+            runDay = getLastMonth(runYYMM)
     except Exception as e:
         print(str(e))
-        errorLog.log_dataBase(stock_code+' stock price Exception: '+str(e))
+        errorLog.log_dataBase('stock('+stock_code+') price Exception: '+str(e))
     finally:
         try:
             session.close()

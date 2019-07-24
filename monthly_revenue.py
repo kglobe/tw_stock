@@ -14,7 +14,7 @@ from log_tool import LogTool
 from model import monthly_revenue
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from utility import getDbUrl, getDataFrameData
+from utility import getDbUrl, getDataFrameData, getLastMonth
 from sqlalchemy.pool import NullPool
 
 def getYoYData(df):
@@ -46,7 +46,8 @@ def monthly_report(session, year, month, infoLog):
         r.encoding = 'big5'
         html_df = pd.read_html(StringIO(r.text))
     except Exception as e:
-        print(str(e))
+        year += 1911
+        print(str(year)+str(month)+' 抓資料有問題：'+str(e))
         infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e))
         return
     # 處理一下資料
@@ -100,6 +101,7 @@ def monthly_report(session, year, month, infoLog):
     # return df
 
 def getAllMonthRevenue():
+    before = int(input("請輸入往前抓幾個月？："))
     errorLog = LogTool('monthly_revenue','error')
     infoLog = LogTool('monthly_revenue','info')
     try:
@@ -108,18 +110,28 @@ def getAllMonthRevenue():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        # monthly_report(session,2011,1,infoLog)
-        for yy in range(2019,2020):
-            for mm in range(1,13):
-                print('get '+str(yy)+str(mm)+' monthly revenue')
-                infoLog.log_dataBase('get '+str(yy)+str(mm)+' monthly revenue start...')
-                monthly_report(session,yy,mm,infoLog)
-                # 偽停頓
-                time.sleep(5)
-                infoLog.log_dataBase('get '+str(yy)+str(mm)+' monthly revenue end...')
+        runDay = datetime.date.today()
+        for i in range(0,before+1):
+            runYYMM = str(runDay.year)+str(runDay.month)
+            print('get '+runYYMM+' monthly revenue')
+            infoLog.log_dataBase('get '+runYYMM+' monthly revenue start...')
+            monthly_report(session,runDay.year,runDay.month,infoLog)
+            # 偽停頓
+            time.sleep(5)
+            infoLog.log_dataBase('get '+runYYMM+' monthly revenue end...')
+            print('get '+runYYMM+' monthly revenue OK!!!')
+            runDay = getLastMonth(runYYMM)
+        # for yy in range(2019,2020):
+        #     for mm in range(1,13):
+        #         print('get '+str(yy)+str(mm)+' monthly revenue')
+        #         infoLog.log_dataBase('get '+str(yy)+str(mm)+' monthly revenue start...')
+        #         monthly_report(session,yy,mm,infoLog)
+        #         # 偽停頓
+        #         time.sleep(5)
+        #         infoLog.log_dataBase('get '+str(yy)+str(mm)+' monthly revenue end...')
     except Exception as e:
         print(str(e))
-        errorLog.log_dataBase(str(yy)+str(mm)+' monthly revenue Exception: '+str(e))
+        errorLog.log_dataBase(str(runDay.year)+str(runDay.month)+' monthly revenue Exception: '+str(e))
     finally:
         try:
             session.close()
