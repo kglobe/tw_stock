@@ -41,8 +41,16 @@ def monthly_report(session, year, month, infoLog):
     # 偽瀏覽器
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
     try:
+        s = requests.Session()
+        s.config = {'keep_alive': False}
+        headers = {
+            'Content-Type': 'application/json',
+            'Connection': 'close',
+            'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        }
         # 下載該年月的網站，並用pandas轉換成 dataframe
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=headers, timeout=5)
+        # r = requests.get(url, headers=headers)
         r.encoding = 'big5'
         html_df = pd.read_html(StringIO(r.text))
     except Exception as e:
@@ -50,6 +58,9 @@ def monthly_report(session, year, month, infoLog):
         print(str(year)+str(month)+' 抓資料有問題：'+str(e))
         infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e))
         return
+    finally:
+        s.close()
+        
     # 處理一下資料
     if html_df[0].shape[0] > 500:
         df = html_df[0].copy()

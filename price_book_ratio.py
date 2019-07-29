@@ -21,17 +21,17 @@ def getPriceEarningsRatio(session, datestr, infoLog):
     nowTime = datetime.datetime.now()
     if datestr > (str(nowTime.year)+'{:02d}'.format(nowTime.month)+'{:02d}'.format(nowTime.day)):
         return
-    
+
+    s = requests.Session()
+    s.config = {'keep_alive': False}
+    headers = {
+        'Content-Type': 'application/json',
+        'Connection': 'close',
+        'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+    }
+    r = requests.post('https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date=20190719&selectType=ALL' + datestr + '&type=ALL', headers=headers, timeout=5)
+    r.encoding = 'big5'
     try:
-        s = requests.Session()
-        s.config = {'keep_alive': False}
-        headers = {
-            'Content-Type': 'application/json',
-            'Connection': 'close',
-            'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-        }
-        r = requests.post('http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=' + datestr + '&type=ALL', headers=headers, timeout=5)
-        r.encoding = 'big5'
         df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
                                             for i in r.text.split('\n') 
                                             if len(i.split('",')) == 17 and i[0] != '='])), header=0)
@@ -39,6 +39,8 @@ def getPriceEarningsRatio(session, datestr, infoLog):
         print(str(e))
         infoLog.log_dataBase(datestr+' price earnings ratio Exception: '+str(e))
         return
+    finally:
+        s.close()
     
     #拿掉最後一欄Unnamed: 16
     df.drop(df.columns[df.shape[1]-1], axis=1, inplace=True)
