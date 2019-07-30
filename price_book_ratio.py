@@ -17,11 +17,12 @@ from sqlalchemy import create_engine
 from utility import getDbUrl,getDataFrameData
 from sqlalchemy.pool import NullPool
 
-def getPriceEarningsRatio(session, datestr, infoLog):
+def getPriceEarningsRatio(session, dataDate, infoLog):
     nowTime = datetime.datetime.now()
-    if datestr > (str(nowTime.year)+'{:02d}'.format(nowTime.month)+'{:02d}'.format(nowTime.day)):
+    if dataDate > nowTime:
         return
 
+    datestr = dataDate.strftime('%Y%m%d')
     s = requests.Session()
     s.config = {'keep_alive': False}
     headers = {
@@ -29,22 +30,24 @@ def getPriceEarningsRatio(session, datestr, infoLog):
         'Connection': 'close',
         'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
     }
-    r = requests.post('https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date=20190719&selectType=ALL' + datestr + '&type=ALL', headers=headers, timeout=5)
+    r = requests.get('https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date='+datestr+'&selectType=ALL' + datestr + '&type=ALL', headers=headers, timeout=5)
     r.encoding = 'big5'
+    print(r)
     try:
         df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
                                             for i in r.text.split('\n') 
                                             if len(i.split('",')) == 17 and i[0] != '='])), header=0)
+        print(df)
     except Exception as e:
         print(str(e))
-        infoLog.log_dataBase(datestr+' price earnings ratio Exception: '+str(e))
+        infoLog.log_dataBase(datestr+' price book ratio Exception: '+str(e))
         return
     finally:
         s.close()
     
     #拿掉最後一欄Unnamed: 16
     df.drop(df.columns[df.shape[1]-1], axis=1, inplace=True)
-    print('----insert '+datestr+' price earnings ratio----')
+    print('----insert '+datestr+' price book ratio----')
     for i in range(0,df.shape[0]):
 
         updatedate = datetime.datetime.now().strftime('%Y%m%d')
@@ -74,15 +77,15 @@ def getPriceEarningsRatio(session, datestr, infoLog):
         per.updatTime = updatetime
         session.merge(per)
     session.commit()
-    infoLog.log_dataBase(datestr+' price_earnings_ratio commit ok!')
-    print('----insert '+datestr+' price earnings ratio ok----')
+    infoLog.log_dataBase(datestr+' price_book_ratio commit ok!')
+    print('----insert '+datestr+' price book ratio ok----')
 
 def getAllPriceEarningsRatio():
     start = input("請輸入起始日期(Ex:20190101)：")
     before = int(input("請輸入往前抓幾天？："))
     dataDate = datetime.datetime.strptime(start, '%Y%m%d')
-    errorLog = LogTool('price_earnings_ratio','error')
-    infoLog = LogTool('price_earnings_ratio','info')
+    errorLog = LogTool('price_book_ratio','error')
+    infoLog = LogTool('price_book_ratio','info')
     datestr = ''
     try:
         engine = create_engine(getDbUrl(), poolclass=NullPool)
@@ -92,17 +95,18 @@ def getAllPriceEarningsRatio():
         session = Session()
         # monthly_report(session,2011,1,infoLog)
         while before>0:
-            print('get '+datestr+' price earnings ratio')
-            infoLog.log_dataBase('get '+datestr+' price earnings ratio start...')
-            getPriceEarningsRatio(session,dataDate.strftime("%Y%m%d"),infoLog)
+            datestr = dataDate.strftime('%Y%m%d')
+            print('get '+datestr+' price book ratio')
+            infoLog.log_dataBase('get '+datestr+' price book ratio start...')
+            getPriceEarningsRatio(session,dataDate,infoLog)
             dataDate = dataDate + datetime.timedelta(days=-1)
             before = before - 1
             # 偽停頓
             time.sleep(5)
-            infoLog.log_dataBase('get '+datestr+' price earnings ratio end...')
+            infoLog.log_dataBase('get '+datestr+' price book ratio end...')
     except Exception as e:
         print(str(e))
-        errorLog.log_dataBase(datestr+' price earnings ratio Exception: '+str(e))
+        errorLog.log_dataBase(datestr+' price book ratio Exception: '+str(e))
     finally:
         try:
             session.close()
