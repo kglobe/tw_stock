@@ -33,15 +33,13 @@ from sqlalchemy.pool import NullPool
     
 #     return yoyDf
 
-def monthly_report(session, year, month, infoLog):
+def monthly_report(session, year, month, stockNo, infoLog):
     
     # 假如是西元，轉成民國
     if year > 1990:
         year -= 1911
     
-    url = 'https://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'_0.html'
-    if year <= 98:
-        url = 'https://mops.twse.com.tw/nas/t21/sii/t21sc03_'+str(year)+'_'+str(month)+'.html'
+    url = 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date='+str(year)+str(month)+'01&stockNo='+str(stockNo)
     
     # 偽瀏覽器
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -57,9 +55,10 @@ def monthly_report(session, year, month, infoLog):
         r = requests.get(url, headers=headers, timeout=5)
         # r = requests.get(url, headers=headers)
         r.encoding = 'big5'
-        html_df = pd.read_html(StringIO(r.text))
+        df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
+                                            for i in r.text.split('\n') 
+                                            if len(i.split('",')) == 17 and i[0] != '='])), header=0)
     except Exception as e:
-        year += 1911
         print(str(year)+str(month)+' 抓資料有問題：'+str(e))
         infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e))
         return
@@ -67,10 +66,10 @@ def monthly_report(session, year, month, infoLog):
         s.close()
 
     # 處理一下資料
-    if html_df[0].shape[0] > 500:
-        df = html_df[0].copy()
-    else:
-        df = pd.concat([df for df in html_df if df.shape[1] <= 11])
+    # if html_df[0].shape[0] > 500:
+    #     df = html_df[0].copy()
+    # else:
+    #     df = pd.concat([df for df in html_df if df.shape[1] <= 11])
     df = df[list(range(0,10))]
     column_index = df.index[(df[0] == '公司代號')][0]
     df.columns = df.iloc[column_index]

@@ -11,7 +11,7 @@ import requests
 from io import StringIO
 import time
 from log_tool import LogTool
-from model import price_earnings_ratio
+from model import price_book_ratio
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from utility import getDbUrl,getDataFrameData
@@ -30,14 +30,30 @@ def getPriceEarningsRatio(session, dataDate, infoLog):
         'Connection': 'close',
         'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
     }
-    r = requests.get('https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date='+datestr+'&selectType=ALL' + datestr + '&type=ALL', headers=headers, timeout=5)
+    r = requests.get('https://www.twse.com.tw/exchangeReport/BWIBBU_d?response=csv&date='+datestr+'&selectType=ALL', headers=headers, timeout=5)
     r.encoding = 'big5'
-    print(r)
+    
+    # aa = r.text.split('\n')
+    # for idx, val in enumerate(aa):
+    #     if idx == 50:
+    #         print(idx,val)
+    #         print(len(val.split('",')))
+    # return
+
+    # print(r.text)
+    formateChangeDate = datetime.datetime.strptime('20170412', '%Y%m%d')
     try:
-        df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
-                                            for i in r.text.split('\n') 
-                                            if len(i.split('",')) == 17 and i[0] != '='])), header=0)
-        print(df)
+        if dataDate > formateChangeDate:
+            df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
+                                                for i in r.text.split('\n') 
+                                                if len(i.split('",')) == 8 and i[0] != '='])), header=0)
+        else:
+            df = pd.read_csv(StringIO("\n".join([i.translate({ord(c): None for c in ' '}) 
+                                                for i in r.text.split('\n') 
+                                                if len(i.split('",')) == 6 and i[0] != '='])), header=0)
+        #拿掉最後一欄Unnamed: 16
+        df.drop(df.columns[df.shape[1]-1], axis=1, inplace=True)
+        # print(df)
     except Exception as e:
         print(str(e))
         infoLog.log_dataBase(datestr+' price book ratio Exception: '+str(e))
@@ -45,37 +61,36 @@ def getPriceEarningsRatio(session, dataDate, infoLog):
     finally:
         s.close()
     
-    #拿掉最後一欄Unnamed: 16
-    df.drop(df.columns[df.shape[1]-1], axis=1, inplace=True)
     print('----insert '+datestr+' price book ratio----')
     for i in range(0,df.shape[0]):
 
         updatedate = datetime.datetime.now().strftime('%Y%m%d')
         updatetime = datetime.datetime.now().strftime('%H%M%S')
-
-        stockPER = df.iloc[i]
-
-        per = price_earnings_ratio()
-        per.priceDate = datestr
-        per.stockCode = getDataFrameData('str',stockPER,'證券代號')
-        per.stockName = getDataFrameData('str',stockPER,'證券名稱')
-        per.tradingVolume = getDataFrameData('int',stockPER,'成交股數')
-        per.numOfTransactions = getDataFrameData('int',stockPER,'成交筆數')
-        per.turnover = getDataFrameData('int',stockPER,'成交金額')
-        per.openPrice = getDataFrameData('float',stockPER,'開盤價')
-        per.highPrice = getDataFrameData('float',stockPER,'最高價')
-        per.lowPrice = getDataFrameData('float',stockPER,'最低價')
-        per.closePrice = getDataFrameData('float',stockPER,'最低價')
-        per.upOrDown = getDataFrameData('str',stockPER,'漲跌(+/-)')
-        per.priceLimit = getDataFrameData('float',stockPER,'漲跌價差')
-        per.finalBuyPrice = getDataFrameData('float',stockPER,'最後揭示買價')
-        per.finalBuyVolume = getDataFrameData('int',stockPER,'最後揭示買量')
-        per.finalSellPrice = getDataFrameData('float',stockPER,'最後揭示賣價')
-        per.finalSellVolume = getDataFrameData('int',stockPER,'最後揭示賣量')
-        per.PER = getDataFrameData('float',stockPER,'本益比')
-        per.updateDate = updatedate
-        per.updatTime = updatetime
-        session.merge(per)
+        
+        stockPER = df.iloc[i,:]
+        
+        pbr = price_book_ratio()
+        pbr.priceDate = datestr
+        pbr.stockCode = getDataFrameData('str',stockPER,'證券代號')
+        pbr.stockName = getDataFrameData('str',stockPER,'證券名稱')
+        pbr.dividendYield = getDataFrameData('float',stockPER,'殖利率(%)')
+        if dataDate > formateChangeDate:
+            pbr.yearOfDividend = getDataFrameData('str',stockPER,'股利年度')
+        else:
+            pbr.yearOfDividend = str(dataDate.year-1911-1)
+        pbr.PER = getDataFrameData('float',stockPER,'本益比')
+        if pbr.PER == '-':
+            pbr.PER = None
+        pbr.priceBookRatio = getDataFrameData('float',stockPER,'股價淨值比')
+        if pbr.priceBookRatio == '-':
+            pbr.priceBookRatio = None
+        if dataDate > formateChangeDate:
+            pbr.financialReport = getDataFrameData('flostrat',stockPER,'財報年/季')
+        else:
+            pbr.financialReport = str(dataDate.year-1911-1)+'/'+str(dataDate.month)
+        pbr.updateDate = updatedate
+        pbr.updateTime = updatetime
+        session.merge(pbr)
     session.commit()
     infoLog.log_dataBase(datestr+' price_book_ratio commit ok!')
     print('----insert '+datestr+' price book ratio ok----')

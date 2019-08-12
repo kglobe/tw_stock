@@ -65,6 +65,19 @@ class check_stock_revenue(Base):
     updateDate = Column(String(8))
     updateTime = Column(String(6))
 
+class price_book_ratio(Base):
+    __tablename__ = 'price_book_ratio'
+    priceDate = Column(String(8), primary_key=True, nullable=True)
+    stockCode = Column(String(6), primary_key=True, nullable=True)
+    stockName = Column(String(500))
+    dividendYield = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    yearOfDividend = Column(String(10))
+    PER = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    priceBookRatio = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    financialReport = Column(String(10))
+    updateDate = Column(String(8))
+    updateTime = Column(String(6))
+
 class error_log(Base):
     __tablename__ = 'error_log'
     priKey = Column(String(30), primary_key=True, nullable=True)

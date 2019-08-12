@@ -25,7 +25,7 @@ def stockprice(session,stock_code,year_month,infoLog,errorLog):
         }
         resp = requests.get('https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date='+year_month+'&stockNo='+str(stock_code), headers=headers, timeout=5)
         resp_data = resp.json()
-
+        
         if resp_data['stat'] != 'OK':
             print('stock('+stock_code+'): '+str(resp_data['stat']))
             infoLog.log_dataBase(stock_code+' : '+str(resp_data['stat']))
@@ -82,7 +82,7 @@ def getAllStock():
         runDay = datetime.date.today()
         for k in range(0,before+1):
             runYYMM = str(runDay.year)+str(runDay.month)
-            for i in range(0,10000):
+            for i in range(848,10000):
                 stock_code = '{:04d}'.format(i)
                 print('get '+runYYMM+' stock('+stock_code+') stock price start...')
                 infoLog.log_dataBase('get '+runYYMM+' stock('+stock_code+') stock price start...')

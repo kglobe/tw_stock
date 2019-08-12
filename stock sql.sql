@@ -65,6 +65,20 @@ CREATE TABLE db.check_stock_revenue( /*用來記錄抓出來的每檔股票紀�
   PRIMARY KEY (prikey,stockCode)
 );
 
+CREATE TABLE db.price_book_ratio (
+  priceDate date not null, /*交易日期*/
+  stockCode varchar(6) not null, /*證券代號*/
+  stockName varchar(500) COLLATE utf8mb4_unicode_ci , /*證券名稱*/
+  dividendYield DECIMAL(21,6), /*殖利率(%)*/
+  yearOfDividend varchar(10), /*股利年度*/
+  PER DECIMAL(21,6), /*本益比*/
+  priceBookRatio DECIMAL(21,6), /*股價淨值比*/
+  financialReport varchar(10), /*財報年/季*/
+  updateDate varchar(8), /*更新日期*/
+  updateTime varchar(6), /*更新時間*/
+  PRIMARY KEY (priceDate,stockCode)
+);
+
 CREATE TABLE db.error_log (
   priKey varchar(30) not null,
   pyFile varchar(30),
@@ -74,3 +88,15 @@ CREATE TABLE db.error_log (
   updateTime varchar(6),
   PRIMARY KEY (prikey)
 );
+
+CREATE TABLE db.stock_score (
+  priKey varchar(30) not null,
+  stockCode varchar(6) not null, /*證券代號*/
+  stockName varchar(500) COLLATE utf8mb4_unicode_ci , /*證券名稱*/
+  score DECIMAL(21,6), /*得分*/
+  updateDate varchar(8),
+  updateTime varchar(6),
+  PRIMARY KEY (prikey)
+);
+
+ALTER TABLE db.error_log ADD INDEX (prikey);
