@@ -17,21 +17,21 @@ from sqlalchemy import create_engine
 from utility import getDbUrl, getDataFrameData, getLastMonth
 from sqlalchemy.pool import NullPool
 
-# def getYoYData(df):
-#     yoyDf = np.zeros(df.shape[0])
-#     for i in range(0,df.shape[0]):
-#         try:
-#             row = df.iloc[i]
-#             if float(row['當月累計營收']) == 0:
-#                 np.append(yoyDf,0)
-#             else:
-#                 yoyComp = (row['當月累計營收']-row['去年累計營收'])/row['當月累計營收']
-#                 yoyDf[i] = yoyComp
-#         except Exception as e:
-#             print(str(e))
-#             np.append(yoyDf,0)
+def getYoYData(df):
+    yoyDf = np.zeros(df.shape[0])
+    for i in range(0,df.shape[0]):
+        try:
+            row = df.iloc[i]
+            if float(row['當月累計營收']) == 0:
+                np.append(yoyDf,0)
+            else:
+                yoyComp = (row['當月累計營收']-row['去年累計營收'])/row['當月累計營收']
+                yoyDf[i] = yoyComp
+        except Exception as e:
+            print(str(e))
+            np.append(yoyDf,0)
     
-#     return yoyDf
+    return yoyDf
 
 def monthly_report(session, year, month, infoLog):
     
@@ -62,9 +62,10 @@ def monthly_report(session, year, month, infoLog):
         year += 1911
         print(str(year)+str(month)+' 抓資料有問題：'+str(e))
         infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e))
-        return
     finally:
         s.close()
+        print('Session closed!')
+        return
 
     # 處理一下資料
     if html_df[0].shape[0] > 500:
@@ -84,7 +85,7 @@ def monthly_report(session, year, month, infoLog):
     df['前期比較增減(%)'] = pd.to_numeric(df['前期比較增減(%)'], 'coerce')
     df = df[~df['當月營收'].isnull()]
     df = df[df['公司代號'] != '合計']
-    # df['累積年增率'] = getYoYData(df)
+    df['累積年增率'] = getYoYData(df)
     year = year+1911
     month = '{:02d}'.format(month)
     # print(df.describe())

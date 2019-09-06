@@ -36,8 +36,11 @@ def getPriceEarningsRatio(session, datestr, infoLog):
                                             for i in r.text.split('\n') 
                                             if len(i.split('",')) == 17 and i[0] != '='])), header=0)
     except Exception as e:
-        print(str(e))
+        print('Exception : {0}'.format(e))
         infoLog.log_dataBase(datestr+' price earnings ratio Exception: '+str(e))
+    finally:
+        s.close()
+        print('Session closed!')
         return
     
     #拿掉最後一欄Unnamed: 16
@@ -77,7 +80,7 @@ def getPriceEarningsRatio(session, datestr, infoLog):
 
 def getAllPriceEarningsRatio():
     start = input("請輸入起始日期(Ex:20190101)：")
-    before = int(input("請輸入往前抓幾天？："))
+    before = int(input("請輸入往前抓幾天？："))+1
     dataDate = datetime.datetime.strptime(start, '%Y%m%d')
     errorLog = LogTool('price_earnings_ratio','error')
     infoLog = LogTool('price_earnings_ratio','info')

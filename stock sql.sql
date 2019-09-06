@@ -1,14 +1,22 @@
 CREATE TABLE db.stock_price (
   priceDate date not null, /*交易日期*/
-  stockCode varchar(6) not null, /*股票代碼*/
+  stockCode varchar(10) not null, /*股票代碼*/
+  stockName varchar(500) COLLATE utf8mb4_unicode_ci , /*公司名稱(證券名稱)*/
   tradingVolume DECIMAL(56,6), /*成交股數*/
   turnover DECIMAL(21,6), /*成交金額*/
   openPrice DECIMAL(12,6), /*開盤價*/
   highPrice DECIMAL(12,6), /*最高價*/
   lowPrice DECIMAL(12,6), /*最低價*/
   closePrice DECIMAL(12,6), /*收盤價*/
+  meanPrice DECIMAL(12,6), /*均價*/
   priceLimit varchar(10), /*漲跌價差*/
   numOfTransactions DECIMAL(21,6), /*成交筆數*/
+  lastBuyPrice DECIMAL(12,6), /*最後買價*/
+  lastSellPrice DECIMAL(12,6), /*最後賣價*/
+  publicNum DECIMAL(56,6), /*發行股數*/
+  nextDayPrice DECIMAL(12,6), /*次日參考價*/
+  nextDayLimitUp DECIMAL(12,6), /*次日漲停價*/
+  nextDayLimitDown DECIMAL(12,6), /*次日跌停價*/
   updateDate varchar(8), /*更新日期*/
   updatTime varchar(6), /*更新時間*/
   PRIMARY KEY (priceDate,stockCode)

@@ -1,4 +1,5 @@
 import datetime
+import re
 # start = input("請輸入起始日期(Ex:20190101)：")
 # before = input("請輸入往前抓幾天？：")
 # fromDate = datetime.datetime.strptime(start, '%Y%m%d')
@@ -24,3 +25,12 @@ import datetime
 
 #########################################
 
+# runDay = datetime.date.today()
+# print(runDay.year)
+# print(runDay.month)
+# print(runDay.day)
+# dataDate = datetime.datetime.strptime('20190825', '%Y%m%d')
+# print(dataDate)
+
+print(len(re.findall(r'[\u4e00-\u9fa5]', '群益中國政金債')))
+print(re.findall(r'[\u4e00-\u9fa5]', '00695B'))
