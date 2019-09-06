@@ -14,6 +14,13 @@ class stock_price(Base):
     closePrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     priceLimit = Column(String(10))
     numOfTransactions = Column(Integer)
+    meanPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    lastBuyPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    lastSellPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    publicNum = Column(Integer)
+    nextDayPrice = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    nextDayLimitUp = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
+    nextDayLimitDown = Column(Numeric(precision=6, asdecimal=False, decimal_return_scale=None))
     updateDate = Column(String(8))
     updatTime = Column(String(6))
 
@@ -34,7 +41,7 @@ class monthly_revenue(Base):
     remarks = Column(String(500))
     updateDate = Column(String(8))
     updatTime = Column(String(6))
-
+    
 class price_earnings_ratio(Base):
     __tablename__ = 'price_earnings_ratio'
     priceDate = Column(String(8), primary_key=True, nullable=True)
