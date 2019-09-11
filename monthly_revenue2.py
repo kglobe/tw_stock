@@ -68,40 +68,64 @@ def monthly_report(session, stockCode, year, month, infoLog):
         r = requests.post('https://mops.twse.com.tw/mops/web/t05st10_ifrs', data=payload, headers=headers, timeout=5)
         r.encoding = 'utf8'
         soup = BeautifulSoup(r.text, 'html.parser')
+        stockName = soup.select_one('td.compName b').text.strip()
+        stockName = stockName[stockName.index('公司)')+3:stockName.index('公司提供')].strip()
         table = soup.select_one('table.hasBorder')
         trs = table.select('tr')
         th_array = []
         td_array = []
         for idx, t in enumerate(trs):
-            if idx != 0:
-                # print(idx,':',t.th.text.strip(),',',t.td.text.strip())
-                if t.th.text.strip() == '增減百分比' and idx==4:
-                    th_array.append('單月年增率')
-                    td_array.append(t.td.text.strip())
-                elif t.th.text.strip() == '增減百分比' and idx==8:
-                    th_array.append('累積年增率')
-                    td_array.append(t.td.text.strip())
-                else:
-                    th_array.append(t.th.text.strip())
-                    td_array.append(t.td.text.strip())
+            # print(idx,':',t.th,',',t.td)
+            if t.th == None:
+                if idx > 1 and idx < 10:
+                    tds = t.find_all('td')
+                    if tds[0].text.strip() == '增減百分比' and idx==5:
+                        th_array.append('單月年增率')
+                        td_array.append(tds[1].text.strip())
+                    elif tds[0].text.strip() == '增減百分比' and idx==9:
+                        th_array.append('累積年增率')
+                        td_array.append(tds[1].text.strip())
+                    else:
+                        th_array.append(tds[0].text.strip())
+                        td_array.append(tds[1].text.strip())
+            else:
+                if idx != 0:
+                    if t.th.text.strip() == '增減百分比' and idx==4:
+                        th_array.append('單月年增率')
+                        td_array.append(t.td.text.strip())
+                    elif t.th.text.strip() == '增減百分比' and idx==8:
+                        th_array.append('累積年增率')
+                        td_array.append(t.td.text.strip())
+                    else:
+                        th_array.append(t.th.text.strip())
+                        td_array.append(t.td.text.strip())
         
         if (month-1) == 0:
             payload = getPayload(stockCode, year-1, 12)
         else:
             payload = getPayload(stockCode, year, month-1)
         
+        time.sleep(2)
         month = '{:02d}'.format(month)
         r = requests.post('https://mops.twse.com.tw/mops/web/t05st10_ifrs', data=payload, headers=headers, timeout=5)
         r.encoding = 'utf8'
         soup = BeautifulSoup(r.text, 'html.parser')
-        stockName = soup.select_one('td.compName b').text.strip()
-        stockName = stockName[stockName.index(')')+1:stockName.index('公司提供')].strip()
         table = soup.select_one('table.hasBorder')
-        trs = table.select('tr')
-        for t in trs:
-            if t.th.text.strip() == '本月':
-                th_array.append('上月營收')
-                td_array.append(t.td.text.strip())
+        if table == None:
+            th_array.append('上月營收')
+            td_array.append(None)
+        else:
+            trs = table.select('tr')
+            for t in trs:
+                if t.th == None:
+                    tds = t.find_all('td')
+                    if tds[0].text.strip() == '本月':
+                        th_array.append('上月營收')
+                        td_array.append(tds[1].text.strip())
+                else:
+                    if t.th.text.strip() == '本月':
+                        th_array.append('上月營收')
+                        td_array.append(t.td.text.strip())
 
     except Exception as e:
         year += 1911
@@ -141,7 +165,9 @@ def monthly_report(session, stockCode, year, month, infoLog):
     infoLog.log_dataBase(str(year)+str(month)+' monthly_revenue commit ok!')
 
 def getAllMonthRevenue():
+    start = input("請輸入起始年月(Ex:201901)：")
     before = int(input("請輸入往前抓幾個月？："))
+    startCode = int(input("請輸入起始股票代碼？："))
     errorLog = LogTool('monthly_revenue2','error')
     infoLog = LogTool('monthly_revenue2','info')
     try:
@@ -150,15 +176,16 @@ def getAllMonthRevenue():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        runDay = datetime.date.today()
-        if runDay.day<15:
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
-        else:
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        # runDay = datetime.date.today()
+        runDay = datetime.datetime.strptime(start+'01', '%Y%m%d')
+        # if runDay.day<10:
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        # else:
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
 
         for i in range(0,before+1):
-            for i in range(1,10000):
+            for i in range(startCode,10000):
                 stock_code = '{:04d}'.format(i)
                 runYYMM = str(runDay.year)+str(runDay.month)
                 print('get '+stock_code+' , '+runYYMM+' monthly revenue2')

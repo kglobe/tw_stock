@@ -101,7 +101,7 @@ def getAllStock():
         # create a Session
         session = Session()
         while before>0:
-                print('get {0} stock price ratio'.format(runDay))
+                print('get {0} stock price'.format(runDay))
                 infoLog.log_dataBase('get {0} price stock price start...'.format(runDay))
                 stockprice(session,runDay,infoLog,errorLog)
                 runDay = runDay + datetime.timedelta(days=-1)

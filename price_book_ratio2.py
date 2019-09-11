@@ -96,22 +96,6 @@ def getAllPriceEarningsRatio2():
                 time.sleep(5)
                 infoLog.log_dataBase('get {0} price_book_ratio2 end...'.format(runDay))
 
-        # for k in range(0,before+1):
-            # runYYMM = str(runDay.year)+str(runDay.month)
-            # for i in range(0,10000):
-            #     stock_code = '{:04d}'.format(i)
-            #     print('get '+runYYMMDD+' stock('+stock_code+') stock price start...')
-            #     infoLog.log_dataBase('get '+runYYMMDD+' stock('+stock_code+') stock price start...')
-            #     stockprice(session,stock_code,runYYMMDD,infoLog,errorLog)
-            #     infoLog.log_dataBase('get '+runYYMMDD+' stock('+stock_code+') stock price end...')
-            #     print('get '+runYYMMDD+' stock('+stock_code+') stock price end...')
-            #     if i%10 == 0:
-            #         print('sleep 20 seconds...')
-            #         time.sleep(20)
-            #     else:
-            #         print('sleep 5 seconds...')
-            #         time.sleep(5)
-            # runDay = getLastMonth(runYYMM)
     except Exception as e:
         print(str(e))
         errorLog.log_dataBase('price_book_ratio2 Exception: '+str(e))
