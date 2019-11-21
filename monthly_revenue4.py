@@ -8,38 +8,59 @@ import numpy as np
 import datetime
 import pandas as pd
 import requests
+import xlrd
+import urllib
 from io import StringIO
 import time
 from log_tool import LogTool
 from model import monthly_revenue
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from utility import getDbUrl, getDataFrameData, getLastMonth
+from utility import getDbUrl, getLastMonth
 from sqlalchemy.pool import NullPool
 
-def getYoYData(df):
-    yoyDf = np.zeros(df.shape[0])
-    for i in range(0,df.shape[0]):
-        try:
-            row = df.iloc[i]
-            if float(row['累計營業收入-去年累計營收']) == 0:
-                np.append(yoyDf,0)
-            else:
-                yoyComp = (row['累計營業收入-當月累計營收']-row['累計營業收入-去年累計營收'])/row['累計營業收入-去年累計營收']
-                yoyDf[i] = yoyComp
-        except Exception as e:
-            print(str(e))
-            np.append(yoyDf,0)
+# def getYoYData(lastYearAccRevenue,thisMonthAccRevenue):
+#     if float(lastYearAccRevenue) == 0:
+#         yoyComp = 0
+#     else:
+#         yoyComp = (thisMonthAccRevenue-lastYearAccRevenue)/lastYearAccRevenue
     
-    return yoyDf
+#     return yoyDf
+
+def getConvertData(convertType,input):
+    try:
+        getValue = eval(convertType)(input)
+    except Exception:
+        getValue = str(input)
+
+    return getValue
+
+def getCompLastMonth(mr):
+    try:
+        if float(mr.lastMonthRevenue) == 0:
+            return 0
+        else:
+            return (mr.thisMonthRevenue-mr.lastMonthRevenue)*100/mr.lastMonthRevenue
+    except Exception as e:
+        print(str(e))
+        return 0
+
+def getCompLastYear(mr):
+    try:
+        if float(mr.lastYearRevenue) == 0:
+            return 0
+        else:
+            return (mr.thisMonthRevenue-mr.lastYearRevenue)*100/mr.lastYearRevenue
+    except Exception as e:
+        print(str(e))
+        return 0
 
 def monthly_report(session, year, month, infoLog):
     
-    # 假如是西元，轉成民國
-    if year > 1990:
-        year -= 1911
-    
-    url = 'https://www.tpex.org.tw/storage/statistic/sales_revenue/O_201907.xls'
+    if month<10:
+        url = 'https://www.tpex.org.tw/storage/statistic/sales_revenue/O_'+str(year)+'0'+str(month)+'.xls'
+    else:
+        url = 'https://www.tpex.org.tw/storage/statistic/sales_revenue/O_'+str(year)+str(month)+'.xls'
     
     # 偽瀏覽器
     # headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -53,12 +74,12 @@ def monthly_report(session, year, month, infoLog):
             'Connection': 'close',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36'
         }
-        r = requests.get(url, headers=headers,  timeout=5)
-        r.encoding = 'UTF8'
-        lines = r.text.replace('\r', '').split('\n')
-        df = pd.read_csv(StringIO("\n".join(lines)), header=0)
+        r = requests.get(url, headers=headers,  timeout=5, allow_redirects=True)
+        r.encoding = 'BIG5'
+        with open('D:/O_'+str(year)+str(month)+'.xls', 'wb') as f:
+            f.write(r.content)
+        
     except Exception as e:
-        year += 1911
         print(str(year)+str(month)+' 抓資料有問題：'+str(e)+' , '+url)
         infoLog.log_dataBase('requests '+str(year)+'_'+str(month)+' monthly report ratio Exception: '+str(e)+' , '+url)
     finally:
@@ -66,36 +87,57 @@ def monthly_report(session, year, month, infoLog):
         print('Session closed!')
         # return
 
-    df['累積年增率'] = getYoYData(df)
-    year = year+1911
-    month = '{:02d}'.format(month)
-    print('----insert '+str(year)+str(month)+' monthly revenue----')
-    for i in range(0,df.shape[0]):
-        updatedate = datetime.datetime.now().strftime('%Y%m%d')
-        updatetime = datetime.datetime.now().strftime('%H%M%S')
-        
-        mr = monthly_revenue()
-        mr.revenueMonth = str(year)+str(month)
-        mr.stockCode = getDataFrameData('str',df.iloc[i,:],'公司代號')
-        mr.stockName = getDataFrameData('str',df.iloc[i,:],'公司名稱')
-        mr.thisMonthRevenue = getDataFrameData('float',df.iloc[i,:],'營業收入-當月營收')
-        mr.lastMonthRevenue = getDataFrameData('float',df.iloc[i,:],'營業收入-上月營收')
-        mr.lastYearRevenue = getDataFrameData('float',df.iloc[i,:],'營業收入-去年當月營收')
-        mr.compLastMonth = getDataFrameData('float',df.iloc[i,:],'營業收入-上月比較增減(%)')
-        mr.compLastYear = getDataFrameData('float',df.iloc[i,:],'營業收入-去年同月增減(%)')
-        mr.thisMonthAccRevenue = getDataFrameData('float',df.iloc[i,:],'累計營業收入-當月累計營收')
-        mr.lastYearAccRevenue = getDataFrameData('float',df.iloc[i,:],'累計營業收入-去年累計營收')
-        mr.compLastAccRevenue = getDataFrameData('float',df.iloc[i,:],'累計營業收入-前期比較增減(%)')
-        mr.yoy = round(getDataFrameData('float',df.iloc[i,:],'累積年增率'),6)
-        mr.remarks = getDataFrameData('str',df.iloc[i,:],'備註')
-        mr.updateDate = updatedate
-        mr.updatTime = updatetime
-        session.merge(mr)
+    workbook = xlrd.open_workbook('D:/O_'+str(year)+str(month)+'.xls')
+    sheets = workbook.sheets()
+    for sheet in sheets:
+        num_rows = sheet.nrows
+        curr_row = -1
+        while curr_row < num_rows:
+            curr_row += 1
+            try:
+                row = sheet.row(curr_row)
+            except Exception :
+                break
+            cell_type = sheet.cell_type(curr_row, 0)
+            if cell_type == 1:
+                cell_value = sheet.cell_value(curr_row, 0)
+                if cell_value[:4].isnumeric():
+                    updatedate = datetime.datetime.now().strftime('%Y%m%d')
+                    updatetime = datetime.datetime.now().strftime('%H%M%S')
+                    
+                    mr = monthly_revenue()
+                    mr.revenueMonth = str(year)+str(month).zfill(2)
+                    mr.stockCode = getConvertData('str',cell_value[:4])
+                    mr.stockName = getConvertData('str',cell_value[5:])
+                    cell_value = sheet.cell_value(curr_row, 2)
+                    mr.lastMonthRevenue = getConvertData('float',cell_value)
+                    cell_value = sheet.cell_value(curr_row, 3)
+                    mr.thisMonthRevenue = getConvertData('float',cell_value)
+                    cell_value = sheet.cell_value(curr_row, 5)
+                    mr.lastYearRevenue = getConvertData('float',cell_value)
+                    mr.compLastMonth = round(getCompLastMonth(mr),6)
+                    mr.compLastYear = round(getCompLastYear(mr),6)
+                    cell_value = sheet.cell_value(curr_row, 4)
+                    mr.thisMonthAccRevenue = getConvertData('float',cell_value)
+                    cell_value = sheet.cell_value(curr_row, 6)
+                    mr.lastYearAccRevenue = getConvertData('float',cell_value)
+                    cell_value = sheet.cell_value(curr_row, 8)
+                    if cell_value == 'NA' or cell_value == '':
+                        mr.yoy = None
+                        mr.compLastMonth = None
+                    else:
+                        mr.yoy = round(getConvertData('float',cell_value),6)/100
+                        mr.compLastMonth = round(getConvertData('float',cell_value),6)
+                    mr.updateDate = updatedate
+                    mr.updatTime = updatetime
+                    session.merge(mr)
+
     session.commit()
     print('----insert '+str(year)+str(month)+' monthly revenue ok----')
     infoLog.log_dataBase(str(year)+str(month)+' monthly_revenue commit ok!')
 
 def getAllMonthRevenue():
+    start = input("請輸入起始年月(Ex:201901)：")
     before = int(input("請輸入往前抓幾個月？："))
     errorLog = LogTool('monthly_revenue','error')
     infoLog = LogTool('monthly_revenue','info')
@@ -105,12 +147,14 @@ def getAllMonthRevenue():
         Session = sessionmaker(bind=engine)
         # create a Session
         session = Session()
-        runDay = datetime.date.today()
-        if runDay.day<10:
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
-        else:
-            runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        # runDay = datetime.date.today()
+        # if runDay.day<10:
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        # else:
+        #     runDay = getLastMonth(str(runDay.year)+str(runDay.month))
+        
+        runDay = datetime.datetime.strptime(start+'01', '%Y%m%d')
         for i in range(0,before+1):
             runYYMM = str(runDay.year)+str(runDay.month)
             print('get '+runYYMM+' monthly revenue')
